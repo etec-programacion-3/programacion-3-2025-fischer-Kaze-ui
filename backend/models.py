@@ -15,15 +15,21 @@ class Usuario(Base):
     telefono = Column(String(20), nullable=True)
     fecha_registro = Column(DateTime, default=func.now())
     fecha_ultimo_acceso = Column(DateTime, nullable=True)
-    estado_cuenta = Column(String(20), default='activo')  # activo, inactivo, suspendido
-    tipo_usuario = Column(String(20), default='cliente')  # cliente, admin, vendedor
+    estado_cuenta = Column(String(20), default='activo')
+    tipo_usuario = Column(String(20), default='cliente')
     
-    # Relaciones
     pedidos = relationship("Pedido", back_populates="usuario")
     mensajes = relationship("Mensaje", back_populates="usuario")
-    conversaciones_enviadas = relationship("Conversacion", foreign_keys="Conversacion.id_usuario_remitente", back_populates="usuario_remitente")
-    conversaciones_recibidas = relationship("Conversacion", foreign_keys="Conversacion.id_usuario_destinatario", back_populates="usuario_destinatario")
-
+    conversaciones_enviadas = relationship(
+        "Conversacion",
+        foreign_keys="Conversacion.id_usuario_remitente",
+        back_populates="usuario_remitente"
+    )
+    conversaciones_recibidas = relationship(
+        "Conversacion",
+        foreign_keys="Conversacion.id_usuario_destinatario",
+        back_populates="usuario_destinatario"
+    )
 
 class Producto(Base):
     __tablename__ = "productos"
@@ -32,15 +38,13 @@ class Producto(Base):
     nombre_producto = Column(String(200), nullable=False)
     descripcion = Column(Text, nullable=True)
     marca = Column(String(100), nullable=False)
-    categoria = Column(String(50), nullable=False)  # procesador, tarjeta_grafica, memoria_ram, etc.
+    categoria = Column(String(50), nullable=False)
     precio = Column(DECIMAL(10,2), nullable=False)
     stock = Column(Integer, default=0)
     imagen = Column(String(255), nullable=True)
     fecha_agregado = Column(DateTime, default=func.now())
     
-    # Relaciones
     items_pedido = relationship("ItemPedido", back_populates="producto")
-
 
 class Pedido(Base):
     __tablename__ = "pedidos"
@@ -49,15 +53,13 @@ class Pedido(Base):
     id_usuario = Column(Integer, ForeignKey('usuario.id_usuario'), nullable=False)
     fecha_pedido = Column(DateTime, default=func.now())
     total = Column(DECIMAL(10,2), nullable=False)
-    estado = Column(String(20), default='pendiente')  # pendiente, procesando, enviado, entregado, cancelado
+    estado = Column(String(20), default='pendiente')
     direccion_envio = Column(Text, nullable=False)
-    metodo_pago = Column(String(50), nullable=True)  # tarjeta, transferencia, efectivo
+    metodo_pago = Column(String(50), nullable=True)
     fecha_entrega = Column(DateTime, nullable=True)
     
-    # Relaciones
     usuario = relationship("Usuario", back_populates="pedidos")
     items = relationship("ItemPedido", back_populates="pedido")
-
 
 class Mensaje(Base):
     __tablename__ = "mensajes"
@@ -67,14 +69,12 @@ class Mensaje(Base):
     asunto = Column(String(200), nullable=False)
     mensaje = Column(Text, nullable=False)
     fecha_mensaje = Column(DateTime, default=func.now())
-    estado = Column(String(20), default='no_leido')  # no_leido, leido, respondido
-    tipo = Column(String(50), nullable=True)  # consulta, reclamo, soporte, sugerencia
+    estado = Column(String(20), default='no_leido')
+    tipo = Column(String(50), nullable=True)
     email_contacto = Column(String(100), nullable=True)
     
-    # Relaciones
     usuario = relationship("Usuario", back_populates="mensajes")
     conversaciones = relationship("Conversacion", back_populates="mensaje")
-
 
 class ItemPedido(Base):
     __tablename__ = "itemspedido"
@@ -86,10 +86,8 @@ class ItemPedido(Base):
     precio_unitario = Column(DECIMAL(10,2), nullable=False)
     subtotal = Column(DECIMAL(10,2), nullable=False)
     
-    # Relaciones
     pedido = relationship("Pedido", back_populates="items")
     producto = relationship("Producto", back_populates="items_pedido")
-
 
 class Conversacion(Base):
     __tablename__ = "conversaciones"
@@ -100,9 +98,16 @@ class Conversacion(Base):
     id_mensaje = Column(Integer, ForeignKey('mensajes.id_mensaje'), nullable=False)
     fecha_envio = Column(DateTime, default=func.now())
     leido = Column(Boolean, default=False)
-    tipo_participacion = Column(String(20), nullable=True)  # emisor, receptor, copia
+    tipo_participacion = Column(String(20), nullable=True)
     
-    # Relaciones
-    usuario_remitente = relationship("Usuario", foreign_keys=[id_usuario_remitente], back_populates="conversaciones_enviadas")
-    usuario_destinatario = relationship("Usuario", foreign_keys=[id_usuario_destinatario], back_populates="conversaciones_recibidas")
+    usuario_remitente = relationship(
+        "Usuario",
+        foreign_keys=[id_usuario_remitente],
+        back_populates="conversaciones_enviadas"
+    )
+    usuario_destinatario = relationship(
+        "Usuario",
+        foreign_keys=[id_usuario_destinatario],
+        back_populates="conversaciones_recibidas"
+    )
     mensaje = relationship("Mensaje", back_populates="conversaciones")

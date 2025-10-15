@@ -1,0 +1,6 @@
+#activar venv, se hace siempre al incio: source venv/bin/activate
+#desactivar venv: deactivate
+#iniciar PostgreSQL, se hace siempre que inicio: sudo service postgresql start
+#ver estado de postgresql: sudo service postgresql status
+#entrar a la consola posgres: sudo -u postgres psql
+#postgres contraseña: 12345*/.|
