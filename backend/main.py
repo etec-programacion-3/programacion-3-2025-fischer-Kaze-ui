@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, status, Header
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -48,27 +48,32 @@ class ProductoResponse(ProductoBase):
 
 # ============= DEPENDENCIAS =============
 
-# Simulación básica de autenticación (TEMPORAL)
-# En issues futuras implementarás JWT real
-def get_current_user(user_type: Optional[str] = None):
+def get_current_user(x_user_role: Optional[str] = Header(None)):
     """
-    Dependencia temporal para simular roles.
-    Parámetros: user_type puede ser "admin" o None (usuario normal)
+    Obtiene el rol del usuario desde el header X-User-Role.
+    
+    IMPLEMENTACIÓN DE RESTRICCIÓN POR ROLES:
+    - Lee el header HTTP 'X-User-Role' de cada request
+    - Si es "admin", retorna un usuario con permisos de administrador
+    - Si no existe o es otro valor, retorna un usuario cliente normal
+    
+    TEMPORAL: En issues futuras esto será reemplazado por JWT tokens.
     """
-    def dependency():
-        # TEMPORAL: Retorna un usuario simulado
-        # En issues futuras esto vendrá del token JWT
-        if user_type == "admin":
-            return {"tipo_usuario": "admin", "id_usuario": 1}
-        return {"tipo_usuario": "cliente", "id_usuario": 2}
-    return dependency
+    if x_user_role == "admin":
+        return {"tipo_usuario": "admin", "id_usuario": 1}
+    return {"tipo_usuario": "cliente", "id_usuario": 2}
 
-def require_admin(current_user: dict = Depends(get_current_user())):
-    """Verifica que el usuario sea administrador"""
+def require_admin(current_user: dict = Depends(get_current_user)):
+    """
+    Verifica que el usuario tenga rol de administrador.
+    
+    Esta función se usa como dependencia en endpoints protegidos.
+    Si el usuario NO es admin, lanza una excepción HTTP 403 Forbidden.
+    """
     if current_user.get("tipo_usuario") != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="No tienes permisos de administrador"
+            detail="Acceso denegado. Se requiere rol de administrador (ADMIN)."
         )
     return current_user
 
@@ -85,7 +90,7 @@ def get_productos(
     limit: int = 100,
     db: Session = Depends(get_db)
 ):
-    """Obtener lista de productos - Acceso público"""
+    """Obtener lista de productos - Acceso público (sin autenticación)"""
     productos = db.query(Producto).offset(skip).limit(limit).all()
     return productos
 
@@ -95,7 +100,7 @@ def get_producto(
     id_producto: int,
     db: Session = Depends(get_db)
 ):
-    """Obtener un producto por ID - Acceso público"""
+    """Obtener un producto por ID - Acceso público (sin autenticación)"""
     producto = db.query(Producto).filter(Producto.id_producto == id_producto).first()
     if not producto:
         raise HTTPException(
@@ -111,7 +116,11 @@ def create_producto(
     db: Session = Depends(get_db),
     current_user: dict = Depends(require_admin)
 ):
-    """Crear un nuevo producto - Solo administradores"""
+    """
+    Crear un nuevo producto - Solo administradores.
+    
+    Requiere header: X-User-Role: admin
+    """
     db_producto = Producto(**producto.model_dump())
     db.add(db_producto)
     db.commit()
@@ -126,7 +135,11 @@ def update_producto(
     db: Session = Depends(get_db),
     current_user: dict = Depends(require_admin)
 ):
-    """Actualizar un producto - Solo administradores"""
+    """
+    Actualizar un producto - Solo administradores.
+    
+    Requiere header: X-User-Role: admin
+    """
     db_producto = db.query(Producto).filter(Producto.id_producto == id_producto).first()
     if not db_producto:
         raise HTTPException(
@@ -148,7 +161,11 @@ def delete_producto(
     db: Session = Depends(get_db),
     current_user: dict = Depends(require_admin)
 ):
-    """Eliminar un producto - Solo administradores"""
+    """
+    Eliminar un producto - Solo administradores.
+    
+    Requiere header: X-User-Role: admin
+    """
     db_producto = db.query(Producto).filter(Producto.id_producto == id_producto).first()
     if not db_producto:
         raise HTTPException(
