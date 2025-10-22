@@ -83,16 +83,127 @@ def require_admin(current_user: dict = Depends(get_current_user)):
 def root():
     return {"message": "E-commerce API - Gestión de Productos"}
 
-# GET /api/products - Obtener todos los productos (público)
+# GET /api/products - Obtener productos con paginación, búsqueda y filtros (público)
 @app.get("/api/products", response_model=List[ProductoResponse])
 def get_productos(
-    skip: int = 0,
-    limit: int = 100,
+    # Paginación
+    page: int = 1,
+    limit: int = 10,
+    # Búsqueda por texto
+    search: Optional[str] = None,
+    # Filtros
+    category: Optional[str] = None,
+    marca: Optional[str] = None,
+    precio_min: Optional[float] = None,
+    precio_max: Optional[float] = None,
+    # Base de datos
     db: Session = Depends(get_db)
 ):
-    """Obtener lista de productos - Acceso público (sin autenticación)"""
-    productos = db.query(Producto).offset(skip).limit(limit).all()
+    """
+    Obtener lista de productos con funcionalidades avanzadas - Acceso público.
+    
+    PAGINACIÓN:
+    - page: número de página (default: 1)
+    - limit: productos por página (default: 10)
+    
+    BÚSQUEDA:
+    - search: busca en nombre y descripción del producto
+    
+    FILTROS:
+    - category: filtra por categoría exacta
+    - marca: filtra por marca exacta
+    - precio_min: precio mínimo
+    - precio_max: precio máximo
+    
+    OPTIMIZACIÓN:
+    - Todas las operaciones se hacen EN LA BASE DE DATOS usando SQLAlchemy
+    - NO se traen todos los registros a memoria
+    - Se usa .filter() para aplicar condiciones SQL
+    - Se usa .offset() y .limit() para paginación eficiente
+    """
+    
+    # Iniciar query base
+    query = db.query(Producto)
+    
+    # FILTRADO EN BASE DE DATOS (eficiente)
+    # Cada .filter() agrega una cláusula WHERE al SQL
+    
+    if search:
+        # Búsqueda por texto en nombre o descripción
+        # ilike = case-insensitive LIKE en SQL
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            (Producto.nombre_producto.ilike(search_pattern)) |
+            (Producto.descripcion.ilike(search_pattern))
+        )
+    
+    if category:
+        # Filtrar por categoría exacta
+        query = query.filter(Producto.categoria == category)
+    
+    if marca:
+        # Filtrar por marca exacta
+        query = query.filter(Producto.marca == marca)
+    
+    if precio_min is not None:
+        # Filtrar por precio mínimo
+        query = query.filter(Producto.precio >= precio_min)
+    
+    if precio_max is not None:
+        # Filtrar por precio máximo
+        query = query.filter(Producto.precio <= precio_max)
+    
+    # PAGINACIÓN EN BASE DE DATOS (eficiente)
+    # Calcular offset basado en la página
+    skip = (page - 1) * limit
+    
+    # Aplicar paginación con LIMIT y OFFSET en SQL
+    query = query.offset(skip).limit(limit)
+    
+    # Ejecutar query y retornar resultados
+    # Solo en este punto se ejecuta el SQL y se traen los datos
+    productos = query.all()
+    
     return productos
+
+# GET /api/products/count - Obtener total de productos (para paginación)
+@app.get("/api/products/count")
+def get_productos_count(
+    search: Optional[str] = None,
+    category: Optional[str] = None,
+    marca: Optional[str] = None,
+    precio_min: Optional[float] = None,
+    precio_max: Optional[float] = None,
+    db: Session = Depends(get_db)
+):
+    """
+    Obtener el total de productos que coinciden con los filtros.
+    Útil para calcular el total de páginas en el frontend.
+    """
+    query = db.query(Producto)
+    
+    if search:
+        search_pattern = f"%{search}%"
+        query = query.filter(
+            (Producto.nombre_producto.ilike(search_pattern)) |
+            (Producto.descripcion.ilike(search_pattern))
+        )
+    
+    if category:
+        query = query.filter(Producto.categoria == category)
+    
+    if marca:
+        query = query.filter(Producto.marca == marca)
+    
+    if precio_min is not None:
+        query = query.filter(Producto.precio >= precio_min)
+    
+    if precio_max is not None:
+        query = query.filter(Producto.precio <= precio_max)
+    
+    total = query.count()
+    
+    return {"total": total}
 
 # GET /api/products/:id - Obtener un producto específico (público)
 @app.get("/api/products/{id_producto}", response_model=ProductoResponse)

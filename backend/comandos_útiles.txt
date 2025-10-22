@@ -10,3 +10,5 @@ source venv/bin/activate
 cd backend
 uvicorn main:app --host 0.0.0.0 --port 8000
 #apagar backend: CTRL+C
+#Base: http://localhost:8000
+Docs: http://localhost:8000/docs (Swagger automático de FastAPI)
