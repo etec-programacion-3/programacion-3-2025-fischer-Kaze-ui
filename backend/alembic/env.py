@@ -40,7 +40,7 @@ if db_url:
 Base = None
 _import_errors = []
 try:
-    from backend.database import Base  # paquete habitual
+    from database import Base  # paquete habitual
     Base = Base
 except Exception as e:
     _import_errors.append(e)
