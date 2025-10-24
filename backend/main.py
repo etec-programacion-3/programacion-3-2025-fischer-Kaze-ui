@@ -4,9 +4,8 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 import uvicorn
 
-
 from database import get_db, engine, Base
-from models import Producto, Usuario
+from models import Producto, Usuario, Carrito
 from pydantic import BaseModel, Field
 
 # Crear las tablas (si no existen)
@@ -47,6 +46,23 @@ class ProductoResponse(ProductoBase):
         from_attributes = True
 
 # ============= DEPENDENCIAS =============
+# ============= SCHEMAS CARRITO =============-(EN DUDA, REVISAR SI SE DEBE MOVER A OTRO LADO)
+
+class CarritoAdd(BaseModel):
+    id_producto: int
+    cantidad: int = Field(default=1, ge=1)
+
+class CarritoUpdate(BaseModel):
+    cantidad: int = Field(..., ge=1)
+
+class CarritoItemResponse(BaseModel):
+    id_carrito: int
+    id_producto: int
+    cantidad: int
+    producto: ProductoResponse
+    
+    class Config:
+        from_attributes = True
 
 def get_current_user(x_user_role: Optional[str] = Header(None)):
     """
