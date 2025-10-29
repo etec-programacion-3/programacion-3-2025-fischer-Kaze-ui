@@ -111,3 +111,16 @@ class Conversacion(Base):
         back_populates="conversaciones_recibidas"
     )
     mensaje = relationship("Mensaje", back_populates="conversaciones")
+
+class Carrito(Base):
+    __tablename__ = "carrito"
+    
+    id_carrito = Column(Integer, primary_key=True, autoincrement=True)
+    id_usuario = Column(Integer, ForeignKey('usuario.id_usuario'), nullable=False)
+    id_producto = Column(Integer, ForeignKey('productos.id_producto'), nullable=False)
+    cantidad = Column(Integer, nullable=False, default=1)
+    fecha_agregado = Column(DateTime, default=func.now())
+    
+    # Relaciones
+    usuario = relationship("Usuario", backref="carrito_items")
+    producto = relationship("Producto")

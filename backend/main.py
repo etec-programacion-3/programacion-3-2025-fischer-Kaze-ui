@@ -304,6 +304,173 @@ def delete_producto(
     db.commit()
     return None
 
+# ============= ENDPOINTS DEL CARRITO =============
+
+# POST /api/cart/add - Agregar producto al carrito
+@app.post("/api/cart/add", status_code=status.HTTP_201_CREATED)
+def add_to_cart(
+    item: CarritoAdd,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Agregar un producto al carrito del usuario.
+    
+    VALIDACIONES:
+    - Verifica que el producto exista
+    - Verifica que haya stock disponible
+    - Si el producto ya está en el carrito, incrementa la cantidad
+    """
+    # Verificar que el producto existe
+    producto = db.query(Producto).filter(Producto.id_producto == item.id_producto).first()
+    if not producto:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Producto no encontrado"
+        )
+    
+    # Verificar stock disponible
+    if producto.stock < item.cantidad:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Stock insuficiente. Disponible: {producto.stock}"
+        )
+    
+    # Verificar si el producto ya está en el carrito
+    carrito_existente = db.query(Carrito).filter(
+        Carrito.id_usuario == current_user["id_usuario"],
+        Carrito.id_producto == item.id_producto
+    ).first()
+    
+    if carrito_existente:
+        # Producto ya existe en carrito: incrementar cantidad
+        nueva_cantidad = carrito_existente.cantidad + item.cantidad
+        
+        # Verificar que no exceda el stock
+        if nueva_cantidad > producto.stock:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cantidad total ({nueva_cantidad}) excede el stock disponible ({producto.stock})"
+            )
+        
+        carrito_existente.cantidad = nueva_cantidad
+        db.commit()
+        db.refresh(carrito_existente)
+        
+        return {
+            "message": "Cantidad actualizada en el carrito",
+            "id_carrito": carrito_existente.id_carrito,
+            "cantidad": carrito_existente.cantidad
+        }
+    else:
+        # Producto nuevo en carrito: crear entrada
+        nuevo_item = Carrito(
+            id_usuario=current_user["id_usuario"],
+            id_producto=item.id_producto,
+            cantidad=item.cantidad
+        )
+        db.add(nuevo_item)
+        db.commit()
+        db.refresh(nuevo_item)
+        
+        return {
+            "message": "Producto agregado al carrito",
+            "id_carrito": nuevo_item.id_carrito,
+            "cantidad": nuevo_item.cantidad
+        }
+
+
+# GET /api/cart - Ver carrito del usuario
+@app.get("/api/cart", response_model=List[CarritoItemResponse])
+def get_cart(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Obtener todos los productos en el carrito del usuario actual.
+    Incluye información completa del producto.
+    """
+    items = db.query(Carrito).filter(
+        Carrito.id_usuario == current_user["id_usuario"]
+    ).all()
+    
+    return items
+
+
+# PUT /api/cart/update/{id_carrito} - Actualizar cantidad
+@app.put("/api/cart/update/{id_carrito}")
+def update_cart_item(
+    id_carrito: int,
+    item: CarritoUpdate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Actualizar la cantidad de un producto en el carrito.
+    Verifica que el item pertenezca al usuario y que haya stock.
+    """
+    # Buscar el item del carrito
+    carrito_item = db.query(Carrito).filter(
+        Carrito.id_carrito == id_carrito,
+        Carrito.id_usuario == current_user["id_usuario"]
+    ).first()
+    
+    if not carrito_item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Item no encontrado en tu carrito"
+        )
+    
+    # Verificar stock disponible
+    producto = db.query(Producto).filter(
+        Producto.id_producto == carrito_item.id_producto
+    ).first()
+    
+    if item.cantidad > producto.stock:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Stock insuficiente. Disponible: {producto.stock}"
+        )
+    
+    # Actualizar cantidad
+    carrito_item.cantidad = item.cantidad
+    db.commit()
+    db.refresh(carrito_item)
+    
+    return {
+        "message": "Cantidad actualizada",
+        "id_carrito": carrito_item.id_carrito,
+        "cantidad": carrito_item.cantidad
+    }
+
+
+# DELETE /api/cart/remove/{id_carrito} - Eliminar del carrito
+@app.delete("/api/cart/remove/{id_carrito}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_from_cart(
+    id_carrito: int,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Eliminar un producto del carrito.
+    Solo puede eliminar items de su propio carrito.
+    """
+    carrito_item = db.query(Carrito).filter(
+        Carrito.id_carrito == id_carrito,
+        Carrito.id_usuario == current_user["id_usuario"]
+    ).first()
+    
+    if not carrito_item:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Item no encontrado en tu carrito"
+        )
+    
+    db.delete(carrito_item)
+    db.commit()
+    
+    return None
+
 # ============= EJECUTAR SERVIDOR =============
 
 if __name__ == "__main__":
