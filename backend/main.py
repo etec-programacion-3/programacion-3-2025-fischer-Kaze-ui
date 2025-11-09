@@ -360,7 +360,7 @@ def add_to_cart(
             )
        
         nuevo_item = ItemCarrito(
-            id_carrito=carrito.id_carrito,
+            id_carrito=carrito.id_usuario,
             id_producto=producto_id,
             cantidad=cantidad_a_agregar
         )
@@ -411,7 +411,7 @@ def update_cart_item(
 
     # 2. Buscar el ítem
     item_existente = db.query(ItemCarrito).filter(
-        ItemCarrito.id_carrito == carrito.id_carrito,
+        ItemCarrito.id_carrito == carrito.id_usuario,
         ItemCarrito.id_producto == producto_id
     ).first()
    
@@ -446,7 +446,7 @@ def remove_from_cart(
 
     # 1. Buscar el ítem
     item_a_eliminar = db.query(ItemCarrito).filter(
-        ItemCarrito.id_carrito == carrito.id_carrito,
+        ItemCarrito.id_carrito == carrito.id_usuario,
         ItemCarrito.id_producto == id_producto
     ).first()
    

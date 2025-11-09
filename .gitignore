@@ -1,0 +1,8 @@
+# Entornos virtuales
+backend/venv/
+backend/venv-ubuntu/
+backend/.venv/
+
+# Archivos compilados de Python
+backend/__pycache__/
+*/__pycache__/
