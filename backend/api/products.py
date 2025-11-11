@@ -8,6 +8,7 @@ from sqlalchemy import func
 import schemas
 import models
 from database import get_db
+# Importamos ambas dependencias
 from dependencies import get_current_user, require_admin
 
 router = APIRouter()
@@ -21,6 +22,9 @@ def _apply_product_filters(
     precio_min: Optional[float] = None,
     precio_max: Optional[float] = None
 ):
+    """
+    Función auxiliar para aplicar filtros de producto comunes a una consulta.
+    """
     if search:
         search_pattern = f"%{search}%"
         query = query.filter(
@@ -83,8 +87,10 @@ def get_producto(id_producto: int, db: Session = Depends(get_db)):
 
 @router.post("/products", response_model=schemas.ProductoResponse, status_code=status.HTTP_201_CREATED)
 def create_producto(
-    producto: schemas.ProductoCreate, db: Session = Depends(get_db),
-    current_user: dict = Depends(require_admin)
+    producto: schemas.ProductoCreate, 
+    db: Session = Depends(get_db),
+    # --- CORREGIDO (Issue 10) ---
+    current_user: models.Usuario = Depends(require_admin)
 ):
     db_producto = models.Producto(**producto.model_dump())
     db.add(db_producto)
@@ -94,9 +100,11 @@ def create_producto(
 
 @router.put("/products/{id_producto}", response_model=schemas.ProductoResponse)
 def update_producto(
-    id_producto: int, producto: schemas.ProductoUpdate,
+    id_producto: int, 
+    producto: schemas.ProductoUpdate,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(require_admin)
+    # --- CORREGIDO (Issue 10) ---
+    current_user: models.Usuario = Depends(require_admin)
 ):
     db_producto = db.query(models.Producto).filter(models.Producto.id_producto == id_producto).first()
     if not db_producto:
@@ -111,8 +119,10 @@ def update_producto(
 
 @router.delete("/products/{id_producto}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_producto(
-    id_producto: int, db: Session = Depends(get_db),
-    current_user: dict = Depends(require_admin)
+    id_producto: int, 
+    db: Session = Depends(get_db),
+    # --- CORREGIDO (Issue 10) ---
+    current_user: models.Usuario = Depends(require_admin)
 ):
     db_producto = db.query(models.Producto).filter(models.Producto.id_producto == id_producto).first()
     if not db_producto:
