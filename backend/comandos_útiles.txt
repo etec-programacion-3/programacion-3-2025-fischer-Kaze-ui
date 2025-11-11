@@ -1,6 +1,6 @@
 #activar venv, se hace siempre al incio: source venv/bin/activate
-#desactivar venv: deactivatesudo service postgresql start
-#iniciar PostgreSQL, se hace siempre que inicio: 
+#desactivar venv: deactivate
+#iniciar PostgreSQL, se hace siempre que inicio: sudo service postgresql start
 #ver estado de postgresql: sudo service postgresql status
 #entrar a la consola posgres: sudo -u postgres psql
 #postgres contraseña: 12345*
@@ -16,3 +16,4 @@
 #Docs: http://localhost:8000/docs (Swagger automático de FastAPI)
 #instalar dotenv: pip install python-dotenv alembic
 #WSL ubuntu sudo password, es: ubuntu
+#conectarse a mi base de datos: sudo -u postgres psql -d electro_tech_db

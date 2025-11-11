@@ -4,5 +4,4 @@ backend/venv-ubuntu/
 backend/.venv/
 
 # Archivos compilados de Python
-backend/__pycache__/
-*/__pycache__/
+**/__pycache__/
