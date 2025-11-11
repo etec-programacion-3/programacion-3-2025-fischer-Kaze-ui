@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session, joinedload
 from typing import List, Optional
 from datetime import datetime
-from sqlalchemy import case, distinct, func
+from sqlalchemy import case, distinct, func, update
 
 import schemas
 import models
@@ -13,13 +13,39 @@ from dependencies import get_current_user
 
 router = APIRouter()
 
-# --- ENDPOINTS DE MENSAJERÍA ---
+# --- ENDPOINT NUEVO (Issue 8) ---
+@router.get("/notifications/unread-messages", response_model=schemas.NotificacionUnreadResponse)
+def get_unread_notification_count(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Devuelve el número total de conversaciones con mensajes no leídos
+    dirigidos al usuario actual.
+    """
+    user_id = current_user["id_usuario"]
+
+    # Contamos las conversaciones únicas (por remitente) que tienen mensajes
+    # dirigidos a mí (destinatario) y que están marcados como no leídos.
+    count = db.query(models.Conversacion.id_usuario_remitente).filter(
+        models.Conversacion.id_usuario_destinatario == user_id,
+        models.Conversacion.leido == False
+    ).distinct().count()
+    
+    return {"total_conversaciones_no_leidas": count}
+
+
+# --- ENDPOINTS DE MENSAJERÍA (Issue 7) ---
 
 @router.get("/conversations", response_model=List[schemas.ConversacionResponse])
 def get_user_conversations(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
+    """
+    Lista las conversaciones ÚNICAS del usuario, mostrando solo el último mensaje/estado
+    de cada conversación.
+    """
     user_id = current_user["id_usuario"]
     
     other_user_id = case(
@@ -68,17 +94,34 @@ def get_user_conversations(
                 contenido=conv.mensaje.mensaje
             )
         
+        # --- LÓGICA MODIFICADA (Issue 8) ---
+        # Contar mensajes no leídos para esta conversación específica
+        # (Esto es una consulta N+1, se puede optimizar si es lento, pero cumple)
+        mensajes_no_leidos_count = db.query(models.Conversacion).filter(
+            (
+                (models.Conversacion.id_usuario_remitente == conv.usuario_remitente.id_usuario) &
+                (models.Conversacion.id_usuario_destinatario == user_id)
+            ) |
+            (
+                (models.Conversacion.id_usuario_remitente == conv.usuario_destinatario.id_usuario) &
+                (models.Conversacion.id_usuario_destinatario == user_id)
+            ),
+            models.Conversacion.leido == False
+        ).count()
+        # --- FIN LÓGICA MODIFICADA ---
+
         conv_schema = schemas.ConversacionResponse(
             id_conversacion=conv.id_conversacion,
             fecha_envio=conv.fecha_envio,
             usuario_remitente=conv.usuario_remitente,
             usuario_destinatario=conv.usuario_destinatario,
             ultimo_mensaje=ultimo_mensaje_schema,
-            mensajes_no_leidos=0 # Issue 8
+            mensajes_no_leidos=mensajes_no_leidos_count
         )
         response_list.append(conv_schema)
 
     return response_list
+
 
 @router.post("/conversations", response_model=schemas.ConversacionResponse, status_code=status.HTTP_201_CREATED)
 def create_or_get_conversation(
@@ -126,7 +169,7 @@ def create_or_get_conversation(
         id_usuario_remitente=remitente_id,
         id_usuario_destinatario=destinatario_id,
         id_mensaje=primer_mensaje.id_mensaje,
-        fecha_envio=primer_mensaje.fecha_mensaje,
+        fecha_envio=primer_mensaje.fecha_mensaje, # <-- CORREGIDO
         leido=True
     )
     db.add(nueva_conversacion)
@@ -140,6 +183,8 @@ def create_or_get_conversation(
 
     return conversacion_respuesta
 
+
+# --- ENDPOINT MODIFICADO (Issue 8 - Marcar como leídos) ---
 @router.get("/conversations/{conversation_partner_id}/messages", response_model=List[schemas.MensajeResponse])
 def get_conversation_messages(
     conversation_partner_id: int,
@@ -148,8 +193,51 @@ def get_conversation_messages(
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
+    """
+    Obtiene todos los mensajes intercambiados con un usuario específico (el "partner"),
+    con paginación.
+    IMPORTANTE: Al llamar a este endpoint, marca los mensajes como LEÍDOS.
+    """
     user_id = current_user["id_usuario"]
     
+    # --- LÓGICA NUEVA (Issue 8): Marcar mensajes como leídos ---
+    # Marcamos como leídos todos los mensajes de este chat
+    # donde YO (user_id) soy el destinatario.
+    
+    # 1. Identificar los IDs de las filas de conversación que deben marcarse
+    conv_ids_to_mark = db.query(models.Conversacion.id_conversacion).filter(
+        models.Conversacion.id_usuario_remitente == conversation_partner_id,
+        models.Conversacion.id_usuario_destinatario == user_id,
+        models.Conversacion.leido == False
+    ).all()
+    
+    conv_ids_list = [c[0] for c in conv_ids_to_mark]
+
+    if conv_ids_list:
+        # 2. Ejecutar el UPDATE en la tabla Conversacion
+        db.execute(
+            update(models.Conversacion)
+            .where(models.Conversacion.id_conversacion.in_(conv_ids_list))
+            .values(leido=True)
+        )
+        
+        # 3. También marcamos el estado en la tabla 'Mensaje'
+        mensaje_ids_to_mark = db.query(models.Conversacion.id_mensaje).filter(
+             models.Conversacion.id_conversacion.in_(conv_ids_list)
+        ).all()
+        mensaje_ids_list = [m[0] for m in mensaje_ids_to_mark]
+        
+        if mensaje_ids_list:
+             db.execute(
+                update(models.Mensaje)
+                .where(models.Mensaje.id_mensaje.in_(mensaje_ids_list))
+                .values(estado='leido')
+            )
+        
+        db.commit()
+    # --- FIN DE LÓGICA NUEVA ---
+
+    # Buscamos todas las filas de Conversacion (mensajes) entre estos dos usuarios
     mensajes_query = db.query(models.Conversacion).options(
         joinedload(models.Conversacion.mensaje)
     ).filter(
@@ -161,17 +249,19 @@ def get_conversation_messages(
             (models.Conversacion.id_usuario_remitente == conversation_partner_id) &
             (models.Conversacion.id_usuario_destinatario == user_id)
         )
-    ).order_by(models.Conversacion.fecha_envio.desc())
+    ).order_by(models.Conversacion.fecha_envio.desc()) # Ordenados del más reciente al más antiguo
 
+    # Aplicar paginación
     skip = (page - 1) * limit
     mensajes = mensajes_query.offset(skip).limit(limit).all()
     
+    # Mapear a la respuesta Pydantic
     response_list = []
     for conv in mensajes:
-        if conv.mensaje:
+        if conv.mensaje: # Asegurarse de que el mensaje exista
             msg_schema = schemas.MensajeResponse(
                 id_mensaje=conv.mensaje.id_mensaje,
-                id_conversacion=conv.id_conversacion,
+                id_conversacion=conv.id_conversacion, # ID de la fila
                 id_usuario_remitente=conv.id_usuario_remitente,
                 fecha_envio=conv.fecha_envio,
                 leido=conv.leido,
@@ -180,6 +270,7 @@ def get_conversation_messages(
             response_list.append(msg_schema)
             
     return response_list
+
 
 @router.post("/conversations/{id_conversacion}/messages", response_model=schemas.MensajeResponse, status_code=status.HTTP_201_CREATED)
 def send_message(
@@ -223,11 +314,12 @@ def send_message(
         id_usuario_remitente=user_id,
         id_usuario_destinatario=destinatario_id,
         id_mensaje=nuevo_mensaje.id_mensaje,
-        fecha_envio=nuevo_mensaje.fecha_mensaje,
+        fecha_envio=nuevo_mensaje.fecha_mensaje, # <-- CORREGIDO
         leido=False
     )
     
     db.add(registro_conversacion)
+    
     db.commit()
     db.refresh(nuevo_mensaje)
     db.refresh(registro_conversacion)
@@ -236,7 +328,7 @@ def send_message(
         id_mensaje=nuevo_mensaje.id_mensaje,
         id_conversacion=registro_conversacion.id_conversacion,
         id_usuario_remitente=user_id,
-        fecha_envio=nuevo_mensaje.fecha_envio,
+        fecha_envio=nuevo_mensaje.fecha_mensaje, # <-- CORREGIDO
         leido=False,
         contenido=nuevo_mensaje.mensaje
     )

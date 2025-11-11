@@ -4,8 +4,7 @@ from pydantic import BaseModel, Field
 from typing import List, Optional
 from datetime import datetime
 
-
-# ============= SCHEMAS DE PRODUCTO =============
+# ============= SCHEMAS DE PRODUCTO (Issues 3 y 4) =============
 
 class ProductoBase(BaseModel):
     nombre_producto: str = Field(..., min_length=1, max_length=200)
@@ -28,9 +27,9 @@ class ProductoResponse(ProductoBase):
     class Config:
         from_attributes = True
 
+# ============= SCHEMAS CARRITO (Issue 5) =============
 
-# ============= SCHEMAS DE CARRITO =============
-
+# Schema para mostrar detalles del producto DENTRO del carrito
 class ProductoEnCarritoResponse(BaseModel):
     id_producto: int
     nombre_producto: str
@@ -40,45 +39,51 @@ class ProductoEnCarritoResponse(BaseModel):
     class Config:
         from_attributes = True
 
+# Schema para un ítem individual en el carrito (respuesta)
 class ItemCarritoResponse(BaseModel):
     id_item_carrito: int
     id_producto: int
     cantidad: int
-    producto: ProductoEnCarritoResponse
+    producto: ProductoEnCarritoResponse # Objeto anidado con detalles del producto
 
     class Config:
         from_attributes = True
 
+# Schema para la respuesta completa del carrito
 class CarritoResponse(BaseModel):
-    id_usuario: int
+    id_usuario: int # ID del dueño del carrito
     fecha_actualizacion: Optional[datetime] = None
     items: List[ItemCarritoResponse] = Field(default_factory=list)
 
     class Config:
         from_attributes = True
 
+# Schema para AÑADIR un producto (POST)
 class CarritoAdd(BaseModel):
     id_producto: int
-    cantidad: int = Field(default=1, ge=1, description="Cantidad a AÑADIR")
+    cantidad: int = Field(default=1, ge=1, description="Cantidad a AÑADIR (se suma a la existente)")
 
+# Schema para ACTUALIZAR un producto (PUT)
 class CarritoUpdate(BaseModel):
     id_producto: int
     cantidad: int = Field(..., ge=1, description="Cantidad TOTAL nueva")
 
 
-# ============= SCHEMAS DE PEDIDOS =============
+# ============= SCHEMAS PEDIDOS (Issue 6) =============
 
 class ItemPedidoResponse(BaseModel):
+    """ Muestra un item específico dentro de un pedido """
     id_producto: int
     cantidad: int
     precio_unitario: float
     subtotal: float
-    producto: ProductoEnCarritoResponse
+    producto: ProductoEnCarritoResponse # Reutilizamos el schema del producto
 
     class Config:
         from_attributes = True
 
 class PedidoResponse(BaseModel):
+    """ Muestra el pedido completo con sus items """
     id_pedido: int
     id_usuario: int
     fecha_pedido: datetime
@@ -89,11 +94,7 @@ class PedidoResponse(BaseModel):
     class Config:
         from_attributes = True
 
-# backend/schemas.py
-
-# ... (Todo tu código anterior de Producto, Carrito y Pedido) ...
-
-# ============= SCHEMAS DE MENSAJERÍA =============
+# ============= SCHEMAS DE MENSAJERÍA (Issue 7) =============
 
 # --- AUXILIAR: Para mostrar quién participa sin exponer contraseñas ---
 class ParticipanteResponse(BaseModel):
@@ -119,9 +120,6 @@ class MensajeResponse(MensajeBase):
     fecha_envio: datetime
     leido: bool
     
-    # Aquí puedes incluir la info del remitente si la necesitas
-    # usuario_remitente: ParticipanteResponse 
-    
     class Config:
         from_attributes = True
 
@@ -133,7 +131,7 @@ class ConversacionCreate(BaseModel):
 
 class ConversacionResponse(BaseModel):
     id_conversacion: int
-    fecha_envio: datetime
+    fecha_envio: datetime 
     
     # Incluimos los participantes para saber con quién hablamos
     usuario_remitente: ParticipanteResponse 
@@ -147,3 +145,9 @@ class ConversacionResponse(BaseModel):
     
     class Config:
         from_attributes = True
+
+# ============= SCHEMAS NOTIFICACIONES (Issue 8) =============
+
+class NotificacionUnreadResponse(BaseModel):
+    # El número total de conversaciones que tienen al menos un mensaje no leído
+    total_conversaciones_no_leidas: int
