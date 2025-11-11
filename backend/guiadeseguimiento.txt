@@ -1,0 +1,1 @@
+ho, 11 de noviembre a las 00:30 de la mañana, me quedé arreglando un code 500 Internal server error, producido a causa de una dependencia defectuosa

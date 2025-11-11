@@ -151,3 +151,42 @@ class ConversacionResponse(BaseModel):
 class NotificacionUnreadResponse(BaseModel):
     # El número total de conversaciones que tienen al menos un mensaje no leído
     total_conversaciones_no_leidas: int
+
+# =====================================================================
+# SCHEMAS DE AUTENTICACIÓN (Issue 9)
+# =====================================================================
+
+# --- Usuario ---
+
+class UsuarioCreate(BaseModel):
+    """ Schema para la creación (registro) de un nuevo usuario """
+    nombre_usuario: str = Field(..., min_length=3, max_length=50)
+    email: str = Field(..., max_length=100)
+    password: str = Field(..., min_length=8, description="La contraseña en texto plano")
+    nombre: str = Field(..., max_length=100)
+    apellido: str = Field(..., max_length=100)
+    telefono: Optional[str] = None
+
+class UsuarioResponse(BaseModel):
+    """ Schema para devolver la información pública de un usuario """
+    id_usuario: int
+    nombre_usuario: str
+    email: str
+    nombre: str
+    apellido: str
+    tipo_usuario: str
+    
+    class Config:
+        from_attributes = True
+
+# --- Token (Login) ---
+
+class Token(BaseModel):
+    """ Schema para la respuesta del Login (el token JWT) """
+    access_token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    """ Schema para el contenido (payload) decodificado del JWT """
+    username: Optional[str] = None
+    user_id: Optional[int] = None
