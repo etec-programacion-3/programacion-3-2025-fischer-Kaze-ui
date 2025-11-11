@@ -1,34 +1,94 @@
 # backend/dependencies.py
 
 from fastapi import Depends, HTTPException, status, Header
-from typing import Optional
+from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy.orm import Session
 
+# Importaciones de nuestros módulos
+from database import SessionLocal
+import models
+import schemas
+import auth # <-- Importamos el nuevo archivo auth
 
-def get_current_user(
-    x_user_id: Optional[int] = Header(None),
-    x_user_role: Optional[str] = Header(None)
-):
+# =====================================================================
+# DEPENDENCIAS DE BASE DE DATOS
+# =====================================================================
+
+def get_db():
+    """ Dependencia para obtener la sesión de la base de datos """
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# =====================================================================
+# DEPENDENCIAS DE AUTENTICACIÓN (Issue 9)
+# =====================================================================
+
+# Usamos el scheme definido en auth.py
+oauth2_scheme = auth.oauth2_scheme
+
+async def get_current_user(
+    token: str = Depends(oauth2_scheme), 
+    db: Session = Depends(get_db)
+) -> models.Usuario:
     """
-    (Temporal hasta Issue 9) Obtiene el usuario simulado desde los headers.
+    Nueva dependencia 'get_current_user'.
+    Decodifica el token JWT y obtiene el usuario de la DB.
     """
-    if x_user_id is None:
+    
+    # Decodifica el token para obtener el payload (los datos)
+    payload = auth.decodificar_token(token)
+    
+    # El payload debe contener el ID de usuario (lo definiremos así en el login)
+    user_id: int = payload.get("user_id")
+    
+    if user_id is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Autenticación requerida. Falta el header 'X-User-ID'."
+            detail="Token JWT inválido: falta ID de usuario",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     
-    role = (x_user_role or "cliente").lower()
+    # Busca al usuario en la base de datos
+    usuario = db.query(models.Usuario).filter(models.Usuario.id_usuario == user_id).first()
     
-    return {"id_usuario": x_user_id, "tipo_usuario": role}
+    if usuario is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado (token inválido)",
+        )
+    
+    # Devuelve el objeto Usuario completo de SQLAlchemy
+    return usuario
 
+async def get_current_user_dict(
+    current_user: models.Usuario = Depends(get_current_user)
+) -> dict:
+    """
+    Dependencia auxiliar que convierte el modelo Usuario de SQLAlchemy
+    en el diccionario simple que usaban los endpoints antiguos.
+    (id_usuario y tipo_usuario)
+    """
+    return {
+        "id_usuario": current_user.id_usuario,
+        "tipo_usuario": current_user.tipo_usuario
+    }
 
-def require_admin(current_user: dict = Depends(get_current_user)):
+# =====================================================================
+# DEPENDENCIAS DE AUTORIZACIÓN (Roles)
+# =====================================================================
+
+def require_admin(
+    current_user: models.Usuario = Depends(get_current_user)
+) -> models.Usuario:
     """
-    Verifica que el usuario tenga rol de administrador.
+    Verifica que el usuario (obtenido del token JWT) tenga el rol 'admin'.
     """
-    if current_user.get("tipo_usuario") != "admin":
+    if current_user.tipo_usuario != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Acceso denegado. Se requiere rol de administrador (ADMIN)."
+            detail="Acceso denegado. Se requiere rol de administrador.",
         )
     return current_user

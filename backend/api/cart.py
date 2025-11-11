@@ -8,6 +8,7 @@ from datetime import datetime
 import schemas
 import models
 from database import get_db
+# Importamos la dependencia que devuelve el OBJETO
 from dependencies import get_current_user
 
 router = APIRouter()
@@ -39,9 +40,11 @@ def get_or_create_cart(db: Session, user_id: int) -> models.Carrito:
 @router.get("/cart", response_model=schemas.CarritoResponse)
 def get_cart(
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    # --- CORREGIDO: Depende del objeto 'models.Usuario' ---
+    current_user: models.Usuario = Depends(get_current_user)
 ):
-    user_id = current_user["id_usuario"]
+    # --- CORREGIDO: Acceso como objeto ---
+    user_id = current_user.id_usuario
     carrito = get_or_create_cart(db, user_id)
     return carrito
 
@@ -49,9 +52,11 @@ def get_cart(
 def add_to_cart(
     item_data: schemas.CarritoAdd,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    # --- CORREGIDO ---
+    current_user: models.Usuario = Depends(get_current_user)
 ):
-    user_id = current_user["id_usuario"]
+    # --- CORREGIDO ---
+    user_id = current_user.id_usuario
     producto_id = item_data.id_producto
     cantidad_a_agregar = item_data.cantidad
     
@@ -99,9 +104,11 @@ def add_to_cart(
 def update_cart_item(
     item_data: schemas.CarritoUpdate,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    # --- CORREGIDO ---
+    current_user: models.Usuario = Depends(get_current_user)
 ):
-    user_id = current_user["id_usuario"]
+    # --- CORREGIDO ---
+    user_id = current_user.id_usuario
     producto_id = item_data.id_producto
     cantidad_nueva = item_data.cantidad 
     
@@ -135,9 +142,11 @@ def update_cart_item(
 def remove_from_cart(
     id_producto: int,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    # --- CORREGIDO ---
+    current_user: models.Usuario = Depends(get_current_user)
 ):
-    user_id = current_user["id_usuario"]
+    # --- CORREGIDO ---
+    user_id = current_user.id_usuario
     carrito = get_or_create_cart(db, user_id)
 
     item_a_eliminar = db.query(models.ItemCarrito).filter(

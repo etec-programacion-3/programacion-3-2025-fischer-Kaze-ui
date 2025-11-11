@@ -8,6 +8,7 @@ from datetime import datetime
 import schemas
 import models
 from database import get_db
+# Importamos la dependencia que devuelve el OBJETO
 from dependencies import get_current_user
 
 router = APIRouter()
@@ -17,9 +18,11 @@ router = APIRouter()
 @router.post("/orders", response_model=schemas.PedidoResponse, status_code=status.HTTP_201_CREATED)
 def create_order(
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    # --- CORREGIDO ---
+    current_user: models.Usuario = Depends(get_current_user)
 ):
-    user_id = current_user["id_usuario"]
+    # --- CORREGIDO ---
+    user_id = current_user.id_usuario
     
     carrito = db.query(models.Carrito).options(
         joinedload(models.Carrito.items).joinedload(models.ItemCarrito.producto)
@@ -84,9 +87,11 @@ def create_order(
 @router.get("/orders", response_model=List[schemas.PedidoResponse])
 def get_user_orders(
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    # --- CORREGIDO ---
+    current_user: models.Usuario = Depends(get_current_user)
 ):
-    user_id = current_user["id_usuario"]
+    # --- CORREGIDO ---
+    user_id = current_user.id_usuario
     pedidos = db.query(models.Pedido).options(
         joinedload(models.Pedido.items).joinedload(models.ItemPedido.producto)
     ).filter(models.Pedido.id_usuario == user_id).order_by(models.Pedido.fecha_pedido.desc()).all()
@@ -96,9 +101,11 @@ def get_user_orders(
 def get_order_details(
     id_pedido: int,
     db: Session = Depends(get_db),
-    current_user: dict = Depends(get_current_user)
+    # --- CORREGIDO ---
+    current_user: models.Usuario = Depends(get_current_user)
 ):
-    user_id = current_user["id_usuario"]
+    # --- CORREGIDO ---
+    user_id = current_user.id_usuario
     pedido = db.query(models.Pedido).options(
         joinedload(models.Pedido.items).joinedload(models.ItemPedido.producto)
     ).filter(models.Pedido.id_pedido == id_pedido).first()
