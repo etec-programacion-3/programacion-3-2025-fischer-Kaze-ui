@@ -1,7 +1,0 @@
-#!/home/etec/programacion-3-2025-fischer-Kaze-ui/backend/.venv/bin/python
-import sys
-from uvicorn.main import main
-if __name__ == '__main__':
-    if sys.argv[0].endswith('.exe'):
-        sys.argv[0] = sys.argv[0][:-4]
-    sys.exit(main())
