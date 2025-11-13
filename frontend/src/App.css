@@ -1,54 +1,63 @@
-/* frontend/src/App.css */
-body {
-  font-family: system-ui, sans-serif;
-  background-color: #242424;
-  color: rgba(255, 255, 255, 0.87);
-}
-
-.App {
+/* --- Filtros y Paginación (Issue 12) --- */
+.filters-bar {
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
+  gap: 10px;
+  margin-bottom: 20px;
+  justify-content: center;
 }
 
-.form-container {
-  border: 1px solid #444;
-  padding: 20px;
-  border-radius: 8px;
-  background-color: #2a2a2a;
-}
-
-form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-input {
+.filters-bar input, .filters-bar select {
   padding: 10px;
-  border-radius: 5px;
-  border: 1px solid #555;
   background-color: #333;
   color: white;
-}
-
-button {
-  padding: 10px;
+  border: 1px solid #555;
   border-radius: 5px;
-  border: none;
-  background-color: #4f46e5;
-  color: white;
-  cursor: pointer;
 }
 
-button:hover {
-  background-color: #4338ca;
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin-top: 30px;
 }
 
-.error {
-  color: #ef4444;
-  background-color: #4f46e520;
-  padding: 10px;
-  border-radius: 5px;
+.pagination button {
+  background-color: #333;
+  border: 1px solid #555;
+}
+
+.pagination button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.no-results {
+  text-align: center;
+  width: 100%;
+  grid-column: 1 / -1;
+  padding: 40px;
+  color: #888;
+}
+
+/* Mejoras visuales para órdenes y carrito */
+.order-card {
+  padding: 20px;
+  background: #252525;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  border-left: 5px solid #4f46e5;
+}
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  font-size: 1.1em;
+  font-weight: bold;
+}
+.status {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.8em;
+  background: #444;
 }
