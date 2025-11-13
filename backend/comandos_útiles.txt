@@ -17,3 +17,8 @@
 #instalar dotenv: pip install python-dotenv alembic
 #WSL ubuntu sudo password, es: ubuntu
 #conectarse a mi base de datos: sudo -u postgres psql -d electro_tech_db
+
+#comandos más usados:
+#python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+#sudo service postgresql start
+#source venv-ubuntu/bin/activate
