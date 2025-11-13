@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import './App.css'; 
+import './App.css';
 
+// Cliente API con Interceptor
 const apiClient = axios.create({
   baseURL: 'http://localhost:8000'
 });
@@ -23,60 +24,58 @@ function App() {
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [token, setToken] = useState(localStorage.getItem('token'));
   const [error, setError] = useState('');
-  
+
   // --- Estados Tienda ---
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState(null);
-  const [orders, setOrders] = useState([]); 
-  const [view, setView] = useState('catalog'); 
+  const [orders, setOrders] = useState([]);
+  const [view, setView] = useState('catalog'); // 'catalog' | 'cart' | 'orders'
 
-  // --- Estados Filtros y Paginación (NUEVO ISSUE 12) ---
+  // --- Filtros ---
   const [searchTerm, setSearchTerm] = useState('');
   const [category, setCategory] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const LIMIT = 6; // Productos por página
+  const LIMIT = 6;
 
   // --- Carga de datos ---
   useEffect(() => {
     const fetchData = async () => {
       if (token) {
         try {
-          // Construimos la URL con filtros
           const params = new URLSearchParams();
           params.append('page', page);
           params.append('limit', LIMIT);
           if (searchTerm) params.append('search', searchTerm);
           if (category) params.append('category', category);
 
-          // Peticiones en paralelo
-          const [prodRes, countRes, cartRes] = await Promise.all([
+          const [prodRes, countRes, cartRes, ordersRes] = await Promise.all([
             apiClient.get(`/api/products?${params.toString()}`),
-            apiClient.get(`/api/products/count?${params.toString()}`), // Para saber total de páginas
-            apiClient.get('/api/cart')
+            apiClient.get(`/api/products/count?${params.toString()}`),
+            apiClient.get('/api/cart'),
+            apiClient.get('/api/orders')
           ]);
-          
+
           setProducts(prodRes.data);
           setTotalPages(Math.ceil(countRes.data.total / LIMIT));
           setCart(cartRes.data);
+          setOrders(ordersRes.data);
 
         } catch (err) {
-          console.error("Error cargando datos:", err);
-          if (err.response && err.response.status === 401) handleLogout();
+          console.error("Error:", err);
+          if (err.response?.status === 401) handleLogout();
         }
       }
     };
     
-    // Debounce pequeño para no saturar la API al escribir
     const timeoutId = setTimeout(() => fetchData(), 300);
     return () => clearTimeout(timeoutId);
+  }, [token, page, searchTerm, category, view]); 
 
-  }, [token, page, searchTerm, category]); // Se ejecuta cuando cambian los filtros
-
-  // --- Manejadores Auth ---
+  // --- Auth Handlers ---
   const handleRegisterChange = (e) => setRegisterForm({ ...registerForm, [e.target.name]: e.target.value });
   const handleLoginChange = (e) => setLoginForm({ ...loginForm, [e.target.name]: e.target.value });
-  
+
   const handleRegister = async (e) => {
     e.preventDefault(); setError('');
     try {
@@ -104,11 +103,10 @@ function App() {
 
   const handleLogout = () => {
     setToken(null); localStorage.removeItem('token');
-    setProducts([]); setCart(null); setOrders([]); setView('catalog');
-    setPage(1); setSearchTerm(''); setCategory('');
+    setProducts([]); setCart(null); setView('catalog');
   };
 
-  // --- Manejadores Tienda ---
+  // --- Tienda Handlers ---
   const handleAddToCart = async (id_producto) => {
     try {
       const response = await apiClient.post('/api/cart/add', { id_producto, cantidad: 1 });
@@ -117,27 +115,36 @@ function App() {
     } catch (err) { alert(`Error: ${err.response?.data?.detail}`); }
   };
 
-  const loadOrders = async () => {
-    const res = await apiClient.get('/api/orders');
-    setOrders(res.data);
-    setView('orders');
-  };
-
+  // --- ISSUE 13: Checkout ---
   const handleCheckout = async () => {
     if (!cart || cart.items.length === 0) return alert("Carrito vacío");
+    if (!window.confirm(`¿Confirmar compra por $${calculateTotal()}?`)) return;
+
     try {
       const response = await apiClient.post('/api/orders');
-      alert(`¡Orden #${response.data.id_pedido} creada!`);
+      alert(`¡Compra exitosa! Orden #${response.data.id_pedido} generada.`);
+      
+      // Recargar datos y limpiar vista
       const newCart = await apiClient.get('/api/cart');
+      const newOrders = await apiClient.get('/api/orders');
       setCart(newCart.data);
-      loadOrders(); // Ir a historial
-    } catch (err) { alert(`Error: ${err.response?.data?.detail}`); }
+      setOrders(newOrders.data);
+      setView('orders'); // Llevar al historial
+    } catch (err) { 
+      alert(`Error al comprar: ${err.response?.data?.detail || 'Error desconocido'}`); 
+    }
+  };
+
+  const calculateTotal = () => {
+    if (!cart) return 0;
+    return cart.items.reduce((acc, item) => acc + (item.producto.precio * item.cantidad), 0).toFixed(2);
   };
 
   // --- Renderizado ---
   if (!token) {
     return (
-      <div className="App">
+      <div className="App centered-container">
+        <h1>Bienvenido a ElectroTech</h1>
         {error && <p className="error">{error}</p>}
         <div className="auth-wrapper">
           <div className="form-container">
@@ -166,109 +173,130 @@ function App() {
 
   return (
     <div className="App">
+      {/* BARRA DE NAVEGACIÓN CON EL BOTÓN NARANJA */}
       <nav className="navbar">
-        <h1 onClick={() => setView('catalog')} style={{cursor: 'pointer'}}>Tienda E-Commerce</h1>
-        <div className="nav-right">
-          <button onClick={() => setView('catalog')}>Catálogo</button>
-          <button onClick={loadOrders}>Mis Órdenes</button>
-          <button onClick={() => setView('cart')} className="cart-btn">
-            Carrito ({cart ? cart.items.length : 0})
+        <h1 onClick={() => setView('catalog')} className="logo">ElectroTech</h1>
+        <div className="nav-links">
+          <button onClick={() => setView('catalog')} className={view==='catalog'?'active':''}>Catálogo</button>
+          <button onClick={() => setView('orders')} className={view==='orders'?'active':''}>Mis Órdenes</button>
+          
+          {/* ESTE ES EL BOTÓN DEL CARRITO */}
+          <button onClick={() => setView('cart')} className={`cart-btn ${view==='cart'?'active':''}`}>
+            🛒 Carrito ({cart ? cart.items.length : 0})
           </button>
+          
           <button onClick={handleLogout} className="logout-button">Salir</button>
         </div>
       </nav>
 
-      {view === 'catalog' && (
-        <div className="catalog-container">
-          {/* --- BARRA DE FILTROS (Issue 12) --- */}
-          <div className="filters-bar">
-            <input 
-              type="text" 
-              placeholder="Buscar producto..." 
-              value={searchTerm}
-              onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
-            />
-            <select 
-              value={category} 
-              onChange={(e) => { setCategory(e.target.value); setPage(1); }}
-            >
-              <option value="">Todas las Categorías</option>
-              <option value="Electronica">Electrónica</option>
-              <option value="Periféricos">Periféricos</option>
-              <option value="Ropa">Ropa</option>
-              <option value="Hogar">Hogar</option>
-            </select>
-          </div>
+      <div className="main-content">
+        {view === 'catalog' && (
+          <div className="catalog-container">
+            <div className="filters-bar">
+              <input 
+                type="text" 
+                placeholder="🔍 Buscar producto..." 
+                value={searchTerm}
+                onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+              />
+              <select 
+                value={category} 
+                onChange={(e) => { setCategory(e.target.value); setPage(1); }}
+              >
+                <option value="">Todas las Categorías</option>
+                <option value="Electronica">Electrónica</option>
+                <option value="Periféricos">Periféricos</option>
+                <option value="Ropa">Ropa</option>
+              </select>
+            </div>
 
-          {/* Grid de Productos */}
-          <div className="product-grid">
-            {products.length > 0 ? (
-              products.map((p) => (
-                <div key={p.id_producto} className="product-card">
-                  <img src={p.imagen || 'https://via.placeholder.com/150'} alt={p.nombre_producto} />
-                  <h3>{p.nombre_producto}</h3>
-                  <p className="price">${p.precio}</p>
-                  <p className="stock">Stock: {p.stock}</p>
-                  <button onClick={() => handleAddToCart(p.id_producto)}>Agregar al Carrito</button>
+            <div className="product-grid">
+              {products.length > 0 ? (
+                products.map((p) => (
+                  <div key={p.id_producto} className="product-card">
+                    <div className="card-image-placeholder">📷</div>
+                    <h3>{p.nombre_producto}</h3>
+                    <p className="price">${p.precio}</p>
+                    <p className="stock">Stock: {p.stock}</p>
+                    <button onClick={() => handleAddToCart(p.id_producto)}>Añadir al Carrito</button>
+                  </div>
+                ))
+              ) : (
+                <p className="no-results">No se encontraron productos.</p>
+              )}
+            </div>
+
+            <div className="pagination">
+              <button disabled={page <= 1} onClick={() => setPage(page - 1)}>Anterior</button>
+              <span>Página {page} de {totalPages || 1}</span>
+              <button disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Siguiente</button>
+            </div>
+          </div>
+        )}
+
+        {/* VISTA DEL CARRITO (ISSUE 13) */}
+        {view === 'cart' && (
+          <div className="cart-view centered-view">
+            <h2>Tu Carrito de Compras</h2>
+            {(!cart || cart.items.length === 0) ? <p>El carrito está vacío.</p> : (
+              <div className="cart-content">
+                <table className="cart-table">
+                  <thead>
+                    <tr>
+                      <th>Producto</th>
+                      <th>Cant.</th>
+                      <th>Precio Unit.</th>
+                      <th>Subtotal</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cart.items.map((item) => (
+                      <tr key={item.id_item_carrito}>
+                        <td>{item.producto.nombre_producto}</td>
+                        <td>{item.cantidad}</td>
+                        <td>${item.producto.precio}</td>
+                        <td>${(item.producto.precio * item.cantidad).toFixed(2)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="cart-summary">
+                  <h3>Total a Pagar: ${calculateTotal()}</h3>
+                  <button className="checkout-btn" onClick={handleCheckout}>✅ Finalizar Compra</button>
                 </div>
-              ))
-            ) : (
-              <p className="no-results">No se encontraron productos.</p>
+              </div>
             )}
           </div>
+        )}
 
-          {/* --- PAGINACIÓN (Issue 12) --- */}
-          <div className="pagination">
-            <button disabled={page <= 1} onClick={() => setPage(page - 1)}>Anterior</button>
-            <span>Página {page} de {totalPages || 1}</span>
-            <button disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Siguiente</button>
+        {view === 'orders' && (
+          <div className="orders-view centered-view">
+            <h2>Historial de Órdenes</h2>
+            {orders.length === 0 ? <p>No tienes órdenes aún.</p> : (
+              <div className="orders-list">
+                {orders.map((o) => (
+                  <div key={o.id_pedido} className="order-card">
+                    <div className="order-header">
+                      <span>Orden #{o.id_pedido}</span>
+                      <span className="date">{new Date(o.fecha_pedido).toLocaleDateString()}</span>
+                      <span className={`status ${o.estado}`}>{o.estado}</span>
+                    </div>
+                    <div className="order-items">
+                      {o.items.map(i => (
+                        <div key={i.id_producto} className="order-item-row">
+                          <span>{i.producto.nombre_producto}</span>
+                          <span>x{i.cantidad}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="order-total">Total: ${o.total}</div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        </div>
-      )}
-
-      {view === 'cart' && (
-        <div className="cart-view">
-          <h2>Tu Carrito</h2>
-          {(!cart || cart.items.length === 0) ? <p>El carrito está vacío.</p> : (
-            <div>
-              <ul className="cart-list">
-                {cart.items.map((item) => (
-                  <li key={item.id_item_carrito}>
-                    <strong>{item.producto.nombre_producto}</strong> 
-                    <span> x{item.cantidad}</span>
-                    <span> = ${(item.producto.precio * item.cantidad).toFixed(2)}</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="cart-actions">
-                <button className="checkout-btn" onClick={handleCheckout}>Finalizar Compra</button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {view === 'orders' && (
-        <div className="orders-view">
-          <h2>Historial de Órdenes</h2>
-          {orders.length === 0 && <p>No tienes órdenes aún.</p>}
-          {orders.map((o) => (
-            <div key={o.id_pedido} className="order-card">
-              <div className="order-header">
-                <span>Orden #{o.id_pedido}</span>
-                <span className={`status ${o.estado}`}>{o.estado}</span>
-              </div>
-              <p>Fecha: {new Date(o.fecha_pedido).toLocaleDateString()}</p>
-              <p>Total: <strong>${o.total}</strong></p>
-              <ul>
-                {o.items.map(i => (
-                  <li key={i.id_producto}>{i.producto.nombre_producto} (x{i.cantidad})</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
