@@ -7,8 +7,10 @@ import uvicorn
 from database import Base, engine
 from routes import router
 
-# Crear las tablas (si no existen) - Alembic es preferido para producción
-Base.metadata.create_all(bind=engine)
+# --- CORRECCIÓN ---
+# Esta línea entra en conflicto con Alembic y causa el error de "InvalidForeignKey".
+# La creación de tablas debe ser manejada ÚNICAMENTE por 'alembic upgrade head'.
+# Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="E-commerce API", version="1.0.0")
 
