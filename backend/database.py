@@ -1,27 +1,25 @@
-# ...existing code...
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 import os
 from dotenv import load_dotenv
+from urllib.parse import quote_plus
 
 load_dotenv()
 
-# ...existing code...
-from urllib.parse import quote_plus
+# Cargar variables de entorno (Sin valores por defecto para credenciales)
+POSTGRES_USER = os.getenv("POSTGRES_USER")
+POSTGRES_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+POSTGRES_HOST = os.getenv("POSTGRES_HOST", "localhost")
+POSTGRES_PORT = os.getenv("POSTGRES_PORT", "5432")
+POSTGRES_DB = os.getenv("POSTGRES_DB")
 
-# Preferir DATABASE_URL si está definida (ej. en .env)
-_db_url = os.getenv("DATABASE_URL")
-if _db_url:
-    SQLALCHEMY_DATABASE_URL = _db_url
-else:
-    # Desglosar componentes y codificar la contraseña para evitar errores por caracteres especiales
-    _user = os.getenv("POSTGRES_USER", "postgres")
-    _password = os.getenv("POSTGRES_PASSWORD", "12345*")
-    _host = os.getenv("POSTGRES_HOST", "localhost")
-    _port = os.getenv("POSTGRES_PORT", "5432")
-    _name = os.getenv("POSTGRES_DB", "electro_tech_db")
-    SQLALCHEMY_DATABASE_URL = f"postgresql://{_user}:{quote_plus(_password)}@{_host}:{_port}/{_name}"
-# ...existing code...
+# Validar que las variables esenciales estén presentes
+if not all([POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB]):
+    raise EnvironmentError("Faltan variables de entorno críticas (POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB) en el archivo .env")
+
+# Codificar la contraseña para la URL
+encoded_password = quote_plus(POSTGRES_PASSWORD)
+SQLALCHEMY_DATABASE_URL = f"postgresql://{POSTGRES_USER}:{encoded_password}@{POSTGRES_HOST}:{POSTGRES_PORT}/{POSTGRES_DB}"
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -34,4 +32,3 @@ def get_db():
         yield db
     finally:
         db.close()
-# ...existing code...
