@@ -50,56 +50,56 @@ cp .env.example .env
 # 2. Editar el .env (ej. con nano) y reemplazar la clave
 nano .env 
 # (Reemplaza 'tu_clave_secreta_aqui...' por una clave real)
-Ejecutar las Migraciones (Crear la Base de Datos): Este comando creará el archivo sql_app.db con todas las tablas.
+#Ejecutar las Migraciones (Crear la Base de Datos): Este comando creará el archivo sql_app.db con todas las tablas.
 
 alembic upgrade head
-Iniciar el Servidor Backend:
+#Iniciar el Servidor Backend:
 
 
 python3 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
-El Backend estará corriendo en http://localhost:8000/docs.
+#El Backend estará corriendo en http://localhost:8000/docs.
 
-3. Configurar y Ejecutar el FRONTEND (Terminal 2)
-Navegar al Frontend: (Abre una nueva terminal y ve a la raíz del proyecto).
+#3. Configurar y Ejecutar el FRONTEND (Terminal 2)
+#Navegar al Frontend: (Abre una nueva terminal y ve a la raíz del proyecto).
 
 cd frontend
-Instalar Dependencias de Node.js:
+#Instalar Dependencias de Node.js:
 
 npm install
-Iniciar el Servidor Frontend:
+#Iniciar el Servidor Frontend:
 
 npm run dev
-La aplicación web estará disponible en http://localhost:5173/.
+#La aplicación web estará disponible en http://localhost:5173/.
 
-🧪 Probar el Proyecto
-1. Registrar un Usuario (Admin)
-El sistema está diseñado para que el registro web solo cree usuarios de tipo cliente. Para probar la funcionalidad de Administrador (como crear productos), debe "promover" a un usuario manualmente.
+#🧪 Probar el Proyecto
+#1. Registrar un Usuario (Admin)
+#El sistema está diseñado para que el registro web solo cree usuarios de tipo cliente. Para probar la funcionalidad de Administrador (como crear productos), debe "promover" a un usuario manualmente.
 
-Regístrese normalmente desde el Frontend (http://localhost:5173/). (Ej: admin_user / password123)
-ATENCION: la contraseña debe tener mas de 8 caracteres, de lo contrario, no te va a dejar registrarte
-Acceda a la Base de Datos (en la terminal del backend, detenga el servidor con Ctrl+C temporalmente):
+#Regístrese normalmente desde el Frontend (http://localhost:5173/). (Ej: admin_user / password123)
+#ATENCION: la contraseña debe tener mas de 8 caracteres, de lo contrario, no te va a dejar registrarte
+#Acceda a la Base de Datos (en la terminal del backend, detenga el servidor con Ctrl+C temporalmente):
 
 sqlite3 sql_app.db
-Ejecute el SQL (reemplace 'admin_user' por el nombre_usuario que registró):
+#Ejecute el SQL (reemplace 'admin_user' por el nombre_usuario que registró):
 
 UPDATE usuario SET tipo_usuario = 'admin' WHERE nombre_usuario = 'admin_user';
 .quit
-Vuelva a iniciar el servidor (python3 -m uvicorn...).
+#Vuelva a iniciar el servidor (python3 -m uvicorn...).
 
-2. Probar como Admin
+#2. Probar como Admin
 Inicie sesión en el Frontend (http://localhost:5173/) como admin_user.
 
-Navegue a la pestaña "⚙️ Admin".
+#Navegue a la pestaña "⚙️ Admin".
 
-Cree productos usando el formulario.
+#Cree productos usando el formulario.
 
-Vaya a "Catálogo" y verifique que los productos aparecen.
+#Vaya a "Catálogo" y verifique que los productos aparecen.
 
-3. Probar como Cliente
-Cierre Sesión (Logout).
+#3. Probar como Cliente
+#Cierre Sesión (Logout).
 
-Regístrese como un usuario nuevo (ej: cliente_normal).
+#Regístrese como un usuario nuevo (ej: cliente_normal).
 
-Inicie Sesión como cliente_normal.
+#Inicie Sesión como cliente_normal.
 
-Verifique que puede ver los productos, añadirlos al carrito y finalizar la compra.
+#Verifique que puede ver los productos, añadirlos al carrito y finalizar la compra.
