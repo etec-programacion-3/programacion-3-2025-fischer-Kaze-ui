@@ -29,7 +29,7 @@ function App() {
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState(null);
   const [orders, setOrders] = useState([]);
-  const [view, setView] = useState('catalog'); // 'catalog' | 'cart' | 'orders'
+  const [view, setView] = useState('catalog'); // 'catalog' | 'cart' | 'orders' | 'admin'
 
   // --- Filtros ---
   const [searchTerm, setSearchTerm] = useState('');
@@ -37,6 +37,11 @@ function App() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const LIMIT = 6;
+
+  // --- Estado Admin (Nuevo) ---
+  const [newProduct, setNewProduct] = useState({
+    nombre_producto: '', descripcion: '', marca: '', categoria: '', precio: '', stock: '', imagen: ''
+  });
 
   // --- Carga de datos ---
   useEffect(() => {
@@ -70,7 +75,7 @@ function App() {
     
     const timeoutId = setTimeout(() => fetchData(), 300);
     return () => clearTimeout(timeoutId);
-  }, [token, page, searchTerm, category, view]); 
+  }, [token, page, searchTerm, category, view]); // 'view' añadido para recargar al cambiar
 
   // --- Auth Handlers ---
   const handleRegisterChange = (e) => setRegisterForm({ ...registerForm, [e.target.name]: e.target.value });
@@ -115,7 +120,6 @@ function App() {
     } catch (err) { alert(`Error: ${err.response?.data?.detail}`); }
   };
 
-  // --- ISSUE 13: Checkout ---
   const handleCheckout = async () => {
     if (!cart || cart.items.length === 0) return alert("Carrito vacío");
     if (!window.confirm(`¿Confirmar compra por $${calculateTotal()}?`)) return;
@@ -123,7 +127,6 @@ function App() {
     try {
       const response = await apiClient.post('/api/orders');
       alert(`¡Compra exitosa! Orden #${response.data.id_pedido} generada.`);
-      
       // Recargar datos y limpiar vista
       const newCart = await apiClient.get('/api/cart');
       const newOrders = await apiClient.get('/api/orders');
@@ -139,6 +142,33 @@ function App() {
     if (!cart) return 0;
     return cart.items.reduce((acc, item) => acc + (item.producto.precio * item.cantidad), 0).toFixed(2);
   };
+  
+  // --- ADMIN HANDLERS (Nuevo) ---
+  const handleProductChange = (e) => setNewProduct({ ...newProduct, [e.target.name]: e.target.value });
+
+  const handleCreateProduct = async (e) => {
+    e.preventDefault();
+    try {
+      // Convertir tipos numéricos
+      const productToSend = {
+        ...newProduct,
+        precio: parseFloat(newProduct.precio),
+        stock: parseInt(newProduct.stock)
+      };
+      
+      await apiClient.post('/api/products', productToSend);
+      alert('¡Producto creado exitosamente!');
+      setNewProduct({ nombre_producto: '', descripcion: '', marca: '', categoria: '', precio: '', stock: '', imagen: '' });
+      setView('catalog'); // Volver al catálogo para verlo
+    } catch (err) {
+      if (err.response?.status === 403) {
+        alert("⛔ ACCESO DENEGADO: No eres administrador.");
+      } else {
+        alert(`Error: ${err.response?.data?.detail}`);
+      }
+    }
+  };
+
 
   // --- Renderizado ---
   if (!token) {
@@ -173,23 +203,24 @@ function App() {
 
   return (
     <div className="App">
-      {/* BARRA DE NAVEGACIÓN CON EL BOTÓN NARANJA */}
       <nav className="navbar">
         <h1 onClick={() => setView('catalog')} className="logo">ElectroTech</h1>
         <div className="nav-links">
           <button onClick={() => setView('catalog')} className={view==='catalog'?'active':''}>Catálogo</button>
           <button onClick={() => setView('orders')} className={view==='orders'?'active':''}>Mis Órdenes</button>
-          
-          {/* ESTE ES EL BOTÓN DEL CARRITO */}
           <button onClick={() => setView('cart')} className={`cart-btn ${view==='cart'?'active':''}`}>
             🛒 Carrito ({cart ? cart.items.length : 0})
           </button>
-          
+          {/* BOTÓN DE ADMIN (NUEVO) */}
+          <button onClick={() => setView('admin')} className={`admin-btn ${view==='admin'?'active':''}`}>
+            ⚙️ Admin
+          </button>
           <button onClick={handleLogout} className="logout-button">Salir</button>
         </div>
       </nav>
 
       <div className="main-content">
+        {/* VISTA CATALOGO */}
         {view === 'catalog' && (
           <div className="catalog-container">
             <div className="filters-bar">
@@ -204,9 +235,13 @@ function App() {
                 onChange={(e) => { setCategory(e.target.value); setPage(1); }}
               >
                 <option value="">Todas las Categorías</option>
-                <option value="Electronica">Electrónica</option>
+                <option value="Audio">Audio</option>
+                <option value="Computación">Computación</option>
                 <option value="Periféricos">Periféricos</option>
-                <option value="Ropa">Ropa</option>
+                <option value="Celulares">Celulares</option>
+                <option value="Videojuegos">Videojuegos</option>
+                <option value="Tablets">Tablets</option>
+                <option value="Wearables">Wearables</option>
               </select>
             </div>
 
@@ -214,7 +249,7 @@ function App() {
               {products.length > 0 ? (
                 products.map((p) => (
                   <div key={p.id_producto} className="product-card">
-                    <div className="card-image-placeholder">📷</div>
+                    <img src={p.imagen || 'https://via.placeholder.com/150?text=No+Imagen'} alt={p.nombre_producto} className="product-image"/>
                     <h3>{p.nombre_producto}</h3>
                     <p className="price">${p.precio}</p>
                     <p className="stock">Stock: {p.stock}</p>
@@ -234,7 +269,7 @@ function App() {
           </div>
         )}
 
-        {/* VISTA DEL CARRITO (ISSUE 13) */}
+        {/* VISTA CARRITO */}
         {view === 'cart' && (
           <div className="cart-view centered-view">
             <h2>Tu Carrito de Compras</h2>
@@ -269,6 +304,7 @@ function App() {
           </div>
         )}
 
+        {/* VISTA ORDENES */}
         {view === 'orders' && (
           <div className="orders-view centered-view">
             <h2>Historial de Órdenes</h2>
@@ -296,6 +332,28 @@ function App() {
             )}
           </div>
         )}
+        
+        {/* VISTA ADMIN (NUEVO) */}
+        {view === 'admin' && (
+          <div className="admin-view centered-view">
+            <h2>Panel de Administración</h2>
+            <p className="admin-note">Nota: Solo usuarios con rol 'admin' pueden guardar productos.</p>
+            <div className="form-container admin-form">
+              <h3>Agregar Nuevo Producto</h3>
+              <form onSubmit={handleCreateProduct}>
+                <input name="nombre_producto" placeholder="Nombre del Producto" value={newProduct.nombre_producto} onChange={handleProductChange} required />
+                <input name="descripcion" placeholder="Descripción" value={newProduct.descripcion} onChange={handleProductChange} />
+                <input name="marca" placeholder="Marca" value={newProduct.marca} onChange={handleProductChange} required />
+                <input name="categoria" placeholder="Categoría (ej: Periféricos)" value={newProduct.categoria} onChange={handleProductChange} required />
+                <input name="precio" type="number" step="0.01" placeholder="Precio (ej: 99.99)" value={newProduct.precio} onChange={handleProductChange} required />
+                <input name="stock" type="number" placeholder="Stock Inicial (ej: 50)" value={newProduct.stock} onChange={handleProductChange} required />
+                <input name="imagen" placeholder="URL de la Imagen (opcional)" value={newProduct.imagen} onChange={handleProductChange} />
+                <button type="submit" className="admin-submit-btn">Guardar Producto</button>
+              </form>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
