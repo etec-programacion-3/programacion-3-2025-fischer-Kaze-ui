@@ -47,6 +47,7 @@ body {
 
 .nav-links {
   display: flex;
+  flex-wrap: wrap;
   gap: 15px;
 }
 
@@ -69,11 +70,28 @@ button.active {
   background-color: var(--accent-color);
 }
 
-/* Botón de Carrito (NARANJA) */
 .cart-btn { background-color: #d97706; }
 .cart-btn:hover { background-color: #b45309; border-color: white; }
 
 .logout-button { background-color: #dc2626; }
+
+/* --- Estilos Admin (NUEVO) --- */
+.admin-btn {
+  background-color: #6366f1; /* Color Índigo */
+}
+.admin-btn:hover {
+  background-color: #4f46e5;
+  border-color: white;
+}
+.admin-view { width: 100%; }
+.admin-note { color: #fbbf24; margin-bottom: 20px; font-style: italic; }
+.admin-form { max-width: 500px; margin: 0 auto; } /* Centra el form de admin */
+.admin-submit-btn {
+  background-color: #6366f1;
+  font-size: 1.1rem;
+  margin-top: 10px;
+}
+.admin-submit-btn:hover { background-color: #4f46e5; }
 
 /* --- Auth --- */
 .centered-container {
@@ -83,7 +101,6 @@ button.active {
   justify-content: center;
   min-height: 80vh;
 }
-
 .auth-wrapper {
   display: flex;
   gap: 2rem;
@@ -91,7 +108,6 @@ button.active {
   flex-wrap: wrap;
   margin-top: 2rem;
 }
-
 .form-container {
   background-color: var(--card-bg);
   padding: 2rem;
@@ -99,13 +115,11 @@ button.active {
   border: 1px solid var(--border-color);
   width: 300px;
 }
-
 form {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
-
 input, select {
   padding: 10px;
   border-radius: 6px;
@@ -113,7 +127,6 @@ input, select {
   background-color: #2a2a2a;
   color: white;
   font-size: 1em;
-  text-align: center;
 }
 
 /* --- Catálogo --- */
@@ -123,13 +136,11 @@ input, select {
   gap: 15px;
   margin-bottom: 2rem;
 }
-
 .product-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   gap: 2rem;
 }
-
 .product-card {
   background-color: var(--card-bg);
   border: 1px solid var(--border-color);
@@ -141,12 +152,14 @@ input, select {
   transition: transform 0.2s;
 }
 .product-card:hover { transform: translateY(-5px); border-color: var(--accent-color); }
-
-.card-image-placeholder {
-  font-size: 3rem;
-  margin-bottom: 1rem;
+.product-card img, .card-image-placeholder {
+  width: 100%;
+  height: 150px;
+  object-fit: cover;
+  border-radius: 5px;
+  margin-bottom: 10px;
+  background-color: #333;
 }
-
 .price { font-size: 1.2rem; color: #4ade80; font-weight: bold; margin: 0.5rem 0; }
 .stock { font-size: 0.9rem; color: #9ca3af; margin-bottom: 1rem; }
 
@@ -156,23 +169,23 @@ input, select {
   flex-direction: column;
   align-items: center;
 }
-
-.cart-table {
+.cart-content {
   width: 100%;
   max-width: 800px;
+}
+.cart-table {
+  width: 100%;
   border-collapse: collapse;
   margin-bottom: 2rem;
   background-color: var(--card-bg);
   border-radius: 8px;
   overflow: hidden;
 }
-
 .cart-table th, .cart-table td {
   padding: 1rem;
   text-align: center;
   border-bottom: 1px solid #333;
 }
-
 .cart-summary {
   text-align: center;
   background-color: var(--card-bg);
@@ -180,7 +193,6 @@ input, select {
   border-radius: 12px;
   border: 1px solid var(--accent-color);
 }
-
 .checkout-btn {
   background-color: #10b981;
   font-size: 1.2rem;
@@ -197,7 +209,6 @@ input, select {
   width: 100%;
   max-width: 600px;
 }
-
 .order-card {
   background-color: var(--card-bg);
   padding: 1.5rem;
@@ -205,7 +216,6 @@ input, select {
   border-left: 5px solid var(--accent-color);
   text-align: left;
 }
-
 .order-header {
   display: flex;
   justify-content: space-between;
@@ -213,11 +223,17 @@ input, select {
   border-bottom: 1px solid #333;
   padding-bottom: 0.5rem;
 }
-
 .pagination {
   margin-top: 2rem;
   display: flex;
   justify-content: center;
   gap: 1rem;
   align-items: center;
+}
+.no-results {
+  text-align: center;
+  width: 100%;
+  grid-column: 1 / -1;
+  padding: 40px;
+  color: #888;
 }

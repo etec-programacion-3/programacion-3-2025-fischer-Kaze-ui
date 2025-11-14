@@ -7,15 +7,17 @@ import uvicorn
 from database import Base, engine
 from routes import router
 
-# Crear las tablas (si no existen) - Alembic es preferido para producción
-Base.metadata.create_all(bind=engine)
+# --- CORRECCIÓN ---
+# Esta línea entra en conflicto con Alembic y causa el error de "InvalidForeignKey".
+# La creación de tablas debe ser manejada ÚNICAMENTE por 'alembic upgrade head'.
+# Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="E-commerce API", version="1.0.0")
 
 # Configurar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"], # Permite que React (localhost:5173) se conecte
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

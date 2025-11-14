@@ -1,150 +1,87 @@
-# Variables Globales (ajusta los IDs si es necesario)
+# Variables Globales (Ajustar antes de usar)
 @host = http://localhost:8000
-@user_id_1 = 1
-@user_id_2 = 2
-@admin_id = 1
-@product_id_3 = 3
-@conversation_id = 1
+
+# --- INICIA SESIÓN PRIMERO ---
+# 1. Registra un Admin (ej: 'admin_user') y un Cliente (ej: 'client_user') desde el Frontend.
+# 2. Promueve a 'admin_user' usando las instrucciones del README.md.
+# 3. Ejecuta los logins de abajo y copia los tokens.
+
+@admin_username = admin_user
+@admin_password = tu_password_admin
+@admin_token = {{login_admin.response.body.access_token}}
+
+@user_username = client_user
+@user_password = tu_password_cliente
+@user_token = {{login_user.response.body.access_token}}
 
 
 ### =============================================
-### Issue 3/4: Productos (Admin y Público)
+### Issue 9: Autenticación (JWT)
+### =============================================
+
+### (Admin) Iniciar Sesión para obtener Token
+# @name login_admin
+POST {{host}}/api/auth/login
+Content-Type: application/x-www-form-urlencoded
+
+username={{admin_username}}
+&password={{admin_password}}
+&grant_type=password
+
+### (Cliente) Iniciar Sesión para obtener Token
+# @name login_user
+POST {{host}}/api/auth/login
+Content-Type: application/x-www-form-urlencoded
+
+username={{user_username}}
+&password={{user_password}}
+&grant_type=password
+
+### =============================================
+### Issue 3/4/10: Productos (CRUD Admin)
 ### =============================================
 
 ### (ADMIN) Crear un producto
-# Este endpoint requiere rol 'admin'
+# Este endpoint requiere un token de ADMIN
 POST {{host}}/api/products
-X-User-ID: {{admin_id}}
-X-User-Role: admin
+Authorization: Bearer {{admin_token}}
 Content-Type: application/json
 
 {
-  "nombre_producto": "Teclado Mecánico K8",
-  "descripcion": "Teclado TKL con switches brown",
-  "marca": "Keychron",
-  "categoria": "Periféricos",
-  "precio": 120.50,
-  "stock": 25
+  "nombre_producto": "Producto de Prueba (HTTP)",
+  "descripcion": "Creado desde requests.http",
+  "marca": "REST Client",
+  "categoria": "Pruebas",
+  "precio": 1.99,
+  "stock": 10
 }
 
-###
-### (Público) Listar productos (con filtros y paginación)
-GET {{host}}/api/products?page=1&limit=5&category=Periféricos
+### (Público) Listar productos
+GET {{host}}/api/products?page=1&limit=5
 
-###
-### (Público) Ver producto 3
-GET {{host}}/api/products/{{product_id_3}}
+### (ADMIN) Borrar un producto (Cambiar el 1 por un ID real)
+DELETE {{host}}/api/products/1
+Authorization: Bearer {{admin_token}}
 
 
 ### =============================================
-### Issue 5: Carrito de Compras (Cliente)
+### Issue 5/6: Carrito y Pedidos (Cliente)
 ### =============================================
 
-### (Cliente) Añadir al carrito
+### (Cliente) Añadir al carrito (Producto ID 1)
 POST {{host}}/api/cart/add
-X-User-ID: {{user_id_1}}
-X-User-Role: cliente
+Authorization: Bearer {{user_token}}
 Content-Type: application/json
 
 {
-  "id_producto": {{product_id_3}},
-  "cantidad": 2
-}
-
-###
-### (Cliente) Ver carrito
-GET {{host}}/api/cart
-X-User-ID: {{user_id_1}}
-X-User-Role: cliente
-
-###
-### (Cliente) Actualizar cantidad en carrito
-PUT {{host}}/api/cart/update
-X-User-ID: {{user_id_1}}
-X-User-Role: cliente
-Content-Type: application/json
-
-{
-  "id_producto": {{product_id_3}},
-  "cantidad": 3
-}
-
-###
-### (Cliente) Eliminar del carrito
-DELETE {{host}}/api/cart/remove/{{product_id_3}}
-X-User-ID: {{user_id_1}}
-X-User-Role: cliente
-
-
-### =============================================
-### Issue 6: Pedidos (Cliente)
-### =============================================
-
-### (Cliente) 1. Añadir algo al carrito (para poder hacer checkout)
-POST {{host}}/api/cart/add
-X-User-ID: {{user_id_1}}
-X-User-Role: cliente
-Content-Type: application/json
-
-{
-  "id_producto": {{product_id_3}},
+  "id_producto": 1,
   "cantidad": 1
 }
 
-###
-### (Cliente) 2. Crear Pedido (Checkout)
-# Esto convierte el carrito en un pedido y lo vacía
+### (Cliente) Ver mi carrito
+GET {{host}}/api/cart
+Authorization: Bearer {{user_token}}
+
+### (Cliente) Crear Pedido (Checkout)
 POST {{host}}/api/orders
-X-User-ID: {{user_id_1}}
-X-User-Role: cliente
-
-###
-### (Cliente) 3. Ver historial de pedidos
-GET {{host}}/api/orders
-X-User-ID: {{user_id_1}}
-X-User-Role: cliente
-
-###
-### (Cliente) 4. Ver un pedido específico (cambia el 1 por el ID real)
-GET {{host}}/api/orders/1
-X-User-ID: {{user_id_1}}
-X-User-Role: cliente
-
-
-### =============================================
-### Issue 7: Mensajería (Cliente)
-### =============================================
-
-### (Cliente) Iniciar conversación (Usuario 1 con Usuario 2)
-POST {{host}}/api/conversations
-X-User-ID: {{user_id_1}}
-X-User-Role: cliente
-Content-Type: application/json
-
-{
-  "id_usuario_destinatario": {{user_id_2}}
-}
-
-###
-### (Cliente) Enviar mensaje (Usuario 1 al chat 1)
-# Asegúrate de que @conversation_id sea el ID que recibiste arriba
-POST {{host}}/api/conversations/{{conversation_id}}/messages
-X-User-ID: {{user_id_1}}
-X-User-Role: cliente
-Content-Type: application/json
-
-{
-  "contenido": "Hola, esto es una prueba desde el archivo .http"
-}
-
-###
-### (Cliente) Listar mis chats (Usuario 1)
-GET {{host}}/api/conversations
-X-User-ID: {{user_id_1}}
-X-User-Role: cliente
-
-###
-### (Cliente) Ver historial de chat (Usuario 1 con 2), paginado
-GET {{host}}/api/conversations/{{user_id_2}}/messages?page=1&limit=5
-X-User-ID: {{user_id_1}}
-X-User-Role: cliente
+Authorization: Bearer {{user_token}}
