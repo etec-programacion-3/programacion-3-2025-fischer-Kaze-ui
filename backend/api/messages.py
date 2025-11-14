@@ -9,7 +9,7 @@ from sqlalchemy import case, distinct, func, update
 import schemas
 import models
 from database import get_db
-# CORRECCIÓN: Importación absoluta (sin los puntos)
+# Importamos la dependencia que devuelve el OBJETO
 from dependencies import get_current_user
 
 router = APIRouter()
@@ -22,7 +22,6 @@ def get_unread_notification_count(
 ):
     user_id = current_user.id_usuario
 
-    # Contar remitentes distintos con mensajes no leídos hacia el usuario
     count = db.query(func.count(distinct(models.Conversacion.id_usuario_remitente))).filter(
         models.Conversacion.id_usuario_destinatario == user_id,
         models.Conversacion.leido == False

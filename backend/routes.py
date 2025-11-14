@@ -4,7 +4,6 @@
 from fastapi import APIRouter
 
 # Importamos los routers individuales desde la nueva carpeta 'api'
-# --- IMPORTACIÓN MODIFICADA (Issue 9) ---
 from api import products, cart, orders, messages, auth
 
 router = APIRouter()

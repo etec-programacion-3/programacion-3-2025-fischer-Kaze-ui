@@ -5,43 +5,32 @@ from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError, jwt
-import bcrypt  # Usamos bcrypt directamente
+from passlib.context import CryptContext
 from dotenv import load_dotenv
 
 load_dotenv()
 
 # --- Configuración de Seguridad ---
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 
-# --- Variables de Entorno ---
+# --- Variables de Entorno (Sin valores por defecto peligrosos) ---
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
 
 if not SECRET_KEY:
-    raise EnvironmentError("Falta la variable de entorno SECRET_KEY en el archivo .env")
+    raise EnvironmentError("Falta la variable de entorno SECRET_KEY en el archivo .env (¡Crítico para seguridad!)")
 
-# --- Funciones de Hashing (CON BCRYPT DIRECTO) ---
-
+# --- Funciones Auxiliares de Hashing ---
 def verificar_password(plain_password: str, hashed_password: str) -> bool:
-    """Compara una contraseña plana con su hash."""
-    return bcrypt.checkpw(
-        plain_password.encode('utf-8'),
-        hashed_password.encode('utf-8')
-    )
+    return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password: str) -> str:
-    """Genera un hash para una contraseña plana."""
-    # Truncar a 72 bytes (límite de bcrypt)
-    password_bytes = password.encode('utf-8')[:72]
-    salt = bcrypt.gensalt()
-    hashed = bcrypt.hashpw(password_bytes, salt)
-    return hashed.decode('utf-8')
+    return pwd_context.hash(password)
 
-# --- Funciones de JWT ---
-
+# --- Funciones Auxiliares de JWT ---
 def crear_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
-    """Crea un nuevo JSON Web Token (JWT)."""
     to_encode = data.copy()
     
     if expires_delta:
@@ -54,7 +43,6 @@ def crear_access_token(data: dict, expires_delta: Optional[timedelta] = None) ->
     return encoded_jwt
 
 def decodificar_token(token: str) -> dict:
-    """Decodifica un token. Lanza una excepción si es inválido o ha expirado."""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
