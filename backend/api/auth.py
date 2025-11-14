@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 import schemas
 import models
-import auth  # Tu archivo auth.py con las funciones de hashing y JWT
+import auth  # Tu archivo auth.py (el de la raíz de backend/)
 from database import get_db
 
 router = APIRouter()
@@ -38,7 +38,6 @@ def register_user(
     hashed_password = auth.get_password_hash(user_data.password)
     
     # 3. Crear el nuevo usuario
-    # (Quitamos el 'password' en texto plano y añadimos el 'password_hash')
     user_data_dict = user_data.model_dump(exclude={"password"})
     nuevo_usuario = models.Usuario(
         **user_data_dict,
@@ -77,7 +76,6 @@ def login_for_access_token(
         )
         
     # 3. Crear el Token JWT
-    # El payload del token debe coincidir con lo que espera 'get_current_user'
     token_data = {
         "sub": usuario.nombre_usuario,
         "user_id": usuario.id_usuario 

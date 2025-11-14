@@ -38,10 +38,7 @@ async def get_current_user(
     Decodifica el token JWT y obtiene el usuario de la DB.
     """
     
-    # Decodifica el token para obtener el payload (los datos)
     payload = auth.decodificar_token(token)
-    
-    # El payload debe contener el ID de usuario (lo definiremos así en el login)
     user_id: int = payload.get("user_id")
     
     if user_id is None:
@@ -51,7 +48,6 @@ async def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
     
-    # Busca al usuario en la base de datos
     usuario = db.query(models.Usuario).filter(models.Usuario.id_usuario == user_id).first()
     
     if usuario is None:
@@ -60,21 +56,7 @@ async def get_current_user(
             detail="Usuario no encontrado (token inválido)",
         )
     
-    # Devuelve el objeto Usuario completo de SQLAlchemy
     return usuario
-
-async def get_current_user_dict(
-    current_user: models.Usuario = Depends(get_current_user)
-) -> dict:
-    """
-    Dependencia auxiliar que convierte el modelo Usuario de SQLAlchemy
-    en el diccionario simple que usaban los endpoints antiguos.
-    (id_usuario y tipo_usuario)
-    """
-    return {
-        "id_usuario": current_user.id_usuario,
-        "tipo_usuario": current_user.tipo_usuario
-    }
 
 # =====================================================================
 # DEPENDENCIAS DE AUTORIZACIÓN (Roles)

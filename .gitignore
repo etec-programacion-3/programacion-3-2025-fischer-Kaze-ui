@@ -1,7 +1,20 @@
-# Entornos virtuales
+# Archivos de Base de Datos SQLite
+backend/sql_app.db
+*.db
+*.db-journal
+
+# Archivos de Entorno y Secretos
+# ¡NUNCA SUBIR EL .env!
+.env
+backend/.env
+
+# Entornos virtuales de Python
 backend/venv/
 backend/venv-ubuntu/
 backend/.venv/
+
+# Dependencias de Frontend
+frontend/node_modules/
 
 # Archivos compilados de Python
 **/__pycache__/

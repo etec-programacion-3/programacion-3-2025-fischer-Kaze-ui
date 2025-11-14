@@ -131,7 +131,7 @@ class ConversacionCreate(BaseModel):
 
 class ConversacionResponse(BaseModel):
     id_conversacion: int
-    fecha_envio: datetime 
+    fecha_envio: datetime # <-- CORREGIDO (antes era fecha_actualizacion)
     
     # Incluimos los participantes para saber con quién hablamos
     usuario_remitente: ParticipanteResponse 

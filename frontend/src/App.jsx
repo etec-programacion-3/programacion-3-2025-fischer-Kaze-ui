@@ -38,7 +38,7 @@ function App() {
   const [totalPages, setTotalPages] = useState(1);
   const LIMIT = 6;
 
-  // --- Estado Admin (Nuevo) ---
+  // --- Estado Admin (NUEVO) ---
   const [newProduct, setNewProduct] = useState({
     nombre_producto: '', descripcion: '', marca: '', categoria: '', precio: '', stock: '', imagen: ''
   });
@@ -54,6 +54,7 @@ function App() {
           if (searchTerm) params.append('search', searchTerm);
           if (category) params.append('category', category);
 
+          // Peticiones en paralelo
           const [prodRes, countRes, cartRes, ordersRes] = await Promise.all([
             apiClient.get(`/api/products?${params.toString()}`),
             apiClient.get(`/api/products/count?${params.toString()}`),
@@ -73,6 +74,7 @@ function App() {
       }
     };
     
+    // Usamos un 'timeout' para no saturar la API al escribir (debounce)
     const timeoutId = setTimeout(() => fetchData(), 300);
     return () => clearTimeout(timeoutId);
   }, [token, page, searchTerm, category, view]); // 'view' añadido para recargar al cambiar
@@ -143,7 +145,7 @@ function App() {
     return cart.items.reduce((acc, item) => acc + (item.producto.precio * item.cantidad), 0).toFixed(2);
   };
   
-  // --- ADMIN HANDLERS (Nuevo) ---
+  // --- ADMIN HANDLERS (NUEVO) ---
   const handleProductChange = (e) => setNewProduct({ ...newProduct, [e.target.name]: e.target.value });
 
   const handleCreateProduct = async (e) => {
