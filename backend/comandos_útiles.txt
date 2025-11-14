@@ -3,7 +3,6 @@
 #iniciar PostgreSQL, se hace siempre que inicio: sudo service postgresql start
 #ver estado de postgresql: sudo service postgresql status
 #entrar a la consola posgres: sudo -u postgres psql
-#postgres contraseña: 12345*
 #ejectuar archivo como parte de un paquete: python -m backend.main
 #Iniciar el backend enlazando a todas las interfaces: (desde la raíz del proyecto)
 #source venv/bin/activate
@@ -15,10 +14,8 @@
 #Base: http://localhost:8000
 #Docs: http://localhost:8000/docs (Swagger automático de FastAPI)
 #instalar dotenv: pip install python-dotenv alembic
-#WSL ubuntu sudo password, es: ubuntu
 #conectarse a mi base de datos: sudo -u postgres psql -d electro_tech_db
 
 #comandos más usados:
 #python -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 #sudo service postgresql start
-#source venv-ubuntu/bin/activate
