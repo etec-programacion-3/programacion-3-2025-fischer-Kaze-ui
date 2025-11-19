@@ -3,10 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import './App.css';
-
+//LA IP DE ABAJO ES UNA IP FIJA QUE CORRESPONDE A LA PC QUE EJECUTA EL BACK, SE DEBE ACTUALIZAR SEGUN DONDE SE EJECUTE EL BACK (PCA)
 // Cliente API con Interceptor
 const apiClient = axios.create({
-  baseURL: 'http://localhost:8000'
+  baseURL: 'http://192.168.42.71:8000'
 });
 
 apiClient.interceptors.request.use(
